@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HP 12C Financial Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --body-bg: #111010;
+    --calc-bg: #2a2520;
+    --calc-border: #1a1714;
+    --display-bg: #1a2a1a;
+    --display-color: #a8e6a3;
+    --display-shadow: #0d1a0d;
+    --key-bg: #1c1a18;
+    --key-border-top: #2e2b28;
+    --key-border-bot: #0e0c0a;
+    --key-text: #e8e4df;
+    --key-hover-bg: #252220;
+    --key-active-bg: #141210;
+    --tvm-bg: #221e18;
+    --tvm-border-top: #342e24;
+    --gold: #c8a84b;
+    --gold-dim: #7a6428;
+    --blue: #4a6fa5;
+    --blue-dim: #2c4266;
+    --enter-bg: #1a1816;
+    --on-bg: #1a1410;
+    --annunciator-active: #a8e6a3;
+    --annunciator-dim: #1f3a1f;
+    --shadow-deep: 0 20px 60px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.6);
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top, rgba(200,168,75,0.08), transparent 30%),
+      radial-gradient(circle at bottom right, rgba(74,111,165,0.08), transparent 32%),
+      var(--body-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+    padding: 24px;
+  }
+
+  .calc-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .calc-brand {
+    color: #5a5048;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .calculator {
+    background: var(--calc-bg);
+    border-radius: 18px;
+    padding: 18px 20px 20px;
+    box-shadow: var(--shadow-deep),
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      inset 0 -1px 0 rgba(0,0,0,0.4);
+    border: 1px solid var(--calc-border);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: min(100%, 1040px);
+    min-height: 0;
+    position: relative;
+  }
+
+  .calculator::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    border-radius: 18px 18px 0 0;
+  }
+
+  /* Left panel: header + display */
+  .calc-left {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "header header"
+      "display display"
+      "modes modes";
+    gap: 8px 16px;
+    width: 100%;
+  }
+
+  /* Header */
+  .calc-header {
+    grid-area: header;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0;
+  }
+
+  .hp-logo {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: 300;
+    color: #6a5e4e;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .hp-logo span {
+    font-weight: 600;
+    color: #8a7a6a;
+  }
+
+  .header-right {
+    text-align: right;
+  }
+
+  .model-name {
+    font-size: 9px;
+    color: #4a4038;
+    letter-spacing: 2px;
+    font-weight: 500;
+    display: block;
+  }
+
+  .model-sub {
+    font-size: 8px;
+    color: #3a3028;
+    letter-spacing: 1px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* Display */
+  .display-container {
+    grid-area: display;
+    background: #0d1a0d;
+    border-radius: 8px;
+    padding: 10px 12px 8px;
+    border: 1px solid #0a120a;
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.7), inset 0 1px 3px rgba(0,0,0,0.5);
+    position: relative;
+    flex: 1;
+    width: 100%;
+    min-height: 92px;
+  }
+
+  .annunciators {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding: 0 2px;
+  }
+
+  .ann {
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--annunciator-dim);
+    letter-spacing: 0.5px;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.1s;
+    user-select: none;
+  }
+
+  .ann.active { color: var(--annunciator-active); }
+  .ann-spacer { flex: 1; }
+
+  @keyframes lcd-pulse {
+    0%, 100% { text-shadow: 0 0 8px rgba(168,230,163,0.35), 0 0 16px rgba(168,230,163,0.12); }
+    50% { text-shadow: 0 0 12px rgba(168,230,163,0.5), 0 0 24px rgba(168,230,163,0.2); }
+  }
+
+  .display-main {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(28px, 4.2vw, 36px);
+    color: var(--display-color);
+    text-align: left;
+    letter-spacing: 1px;
+    min-height: 42px;
+    line-height: 1.2;
+    text-shadow: 0 0 8px rgba(168,230,163,0.35), 0 0 16px rgba(168,230,163,0.12);
+    animation: lcd-pulse 3s ease-in-out infinite;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 2px 2px 0;
+  }
+
+  .display-main.error {
+    color: #e06060;
+    text-shadow: 0 0 10px rgba(224,96,96,0.5);
+    animation: none;
+  }
+
+  .stack-peek {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: #2a4a2a;
+    text-align: right;
+    padding: 2px 2px 0;
+    letter-spacing: 1px;
+    height: 14px;
+  }
+
+  /* Keypad */
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    align-content: start;
+    width: 100%;
+  }
+
+  /* Base key style */
+  .key {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
+    background: var(--key-bg);
+    border: 1px solid var(--key-border-bot);
+    box-shadow:
+      0 3px 0 var(--key-border-bot),
+      inset 0 1px 0 var(--key-border-top);
+    min-height: 46px;
+    padding: 10px 4px 6px;
+  }
+
+  .key:hover {
+    background: var(--key-hover-bg);
+    transform: translateY(-1px);
+    box-shadow:
+      0 4px 0 var(--key-border-bot),
+      inset 0 1px 0 var(--key-border-top);
+  }
+
+  .key:active, .key.pressed {
+    background: var(--key-active-bg);
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 0 var(--key-border-bot),
+      inset 0 1px 0 var(--key-border-bot);
+  }
+
+  /* Key labels */
+  .key-f-label {
+    position: absolute;
+    top: 2px;
+    font-size: 7px;
+    font-weight: 600;
+    color: var(--gold-dim);
+    letter-spacing: 0.3px;
+    text-align: center;
+    line-height: 1;
+    transition: color 0.1s;
+    white-space: nowrap;
+  }
+
+  .key-g-label {
+    position: absolute;
+    bottom: 2px;
+    font-size: 7px;
+    font-weight: 500;
+    color: var(--blue-dim);
+    letter-spacing: 0.3px;
+    text-align: center;
+    line-height: 1;
+    transition: color 0.1s;
+    white-space: nowrap;
+  }
+
+  .key-main {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--key-text);
+    text-align: center;
+    line-height: 1.1;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+
+  /* Shift mode highlight */
+  body.shift-f .key-f-label { color: var(--gold); }
+  body.shift-g .key-g-label { color: var(--blue); }
+
+  /* TVM row keys */
+  .key.tvm {
+    background: var(--tvm-bg);
+    box-shadow:
+      0 3px 0 #0e0b08,
+      inset 0 1px 0 var(--tvm-border-top);
+  }
+  .key.tvm:hover { background: #2a261e; }
+  .key.tvm:active, .key.tvm.pressed { background: #141210; }
+
+  /* f key */
+  .key.key-f {
+    background: #3a2e14;
+    border-color: #1a1408;
+    box-shadow: 0 3px 0 #1a1408, inset 0 1px 0 #4a3c1c;
+  }
+  .key.key-f .key-main { color: var(--gold); font-size: 13px; font-weight: 600; }
+  .key.key-f:hover { background: #443618; }
+  .key.key-f.shift-active { background: #5a4820; box-shadow: 0 3px 0 #1a1408, inset 0 1px 0 #6a581e, 0 0 8px rgba(200,168,75,0.3); }
+
+  /* g key */
+  .key.key-g {
+    background: #14243a;
+    border-color: #081018;
+    box-shadow: 0 3px 0 #081018, inset 0 1px 0 #1e3050;
+  }
+  .key.key-g .key-main { color: var(--blue); font-size: 13px; font-weight: 600; }
+  .key.key-g:hover { background: #1a2e48; }
+  .key.key-g.shift-active { background: #1e3858; box-shadow: 0 3px 0 #081018, inset 0 1px 0 #2a4870, 0 0 8px rgba(74,111,165,0.3); }
+
+  /* ENTER key (spans 1 col but taller feel) */
+  .key.key-enter {
+    background: var(--enter-bg);
+    box-shadow: 0 3px 0 #0a0806, inset 0 1px 0 #282420;
+  }
+  .key.key-enter .key-main { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
+
+  /* ON key */
+  .key.key-on {
+    background: var(--on-bg);
+    box-shadow: 0 3px 0 #0a0806, inset 0 1px 0 #241e18;
+  }
+  .key.key-on .key-main { font-size: 9px; color: #8a7a6a; letter-spacing: 0.5px; }
+
+  /* Digit keys subtle highlight */
+  .key.digit .key-main { font-size: 14px; font-weight: 500; color: #f0ece8; }
+
+  /* CLx key */
+  .key.key-clx .key-main { color: #d4c8bc; }
+
+  /* Separator line between TVM row and rest */
+  .keypad-divider {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #2a2520, #3a3028, #2a2520, transparent);
+    margin: 1px 0;
+  }
+
+  /* STO/RCL mode indicator */
+  .mode-bar {
+    grid-area: modes;
+    display: flex;
+    justify-content: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    margin-bottom: 0;
+    min-height: 14px;
+  }
+
+  .mode-indicator {
+    font-size: 9px;
+    color: #2a3a2a;
+    letter-spacing: 1px;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+
+  .mode-indicator.active { color: #6aaa68; }
+
+  /* Tooltip for stack */
+  .stack-display {
+    display: flex;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 3px 4px 0;
+  }
+
+  .stack-reg {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: #1e3a1e;
+    display: flex;
+    gap: 4px;
+  }
+
+  .stack-reg .reg-name { color: #2a4a28; }
+  .stack-reg .reg-val { color: #3a5e38; }
+
+  /* Number pad section separators via gap */
+  .key-row-sep {
+    grid-column: 1 / -1;
+    height: 2px;
+  }
+
+  /* Scrollbar for long operations */
+  ::-webkit-scrollbar { width: 0; }
+
+  @media (max-width: 860px) {
+    body {
+      align-items: flex-start;
+      padding: 16px;
+    }
+
+    .calculator {
+      width: 100%;
+      max-width: 560px;
+      min-height: 0;
+    }
+
+    .calc-left {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .calc-header {
+      margin-bottom: 0;
+    }
+
+    .display-container {
+      min-height: 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="calc-wrapper">
+  <div class="calc-brand">Hewlett · Packard</div>
+  <div class="calculator">
+    <div class="calc-left">
+      <div class="calc-header">
+        <div class="hp-logo">h<span>p</span></div>
+        <div class="header-right">
+          <div class="model-name">12C FINANCIAL</div>
+          <div class="model-sub">RPN financial calculator</div>
+        </div>
+      </div>
+
+      <!-- Display -->
+      <div class="display-container">
+        <div class="annunciators">
+          <span class="ann" id="ann-f">f</span>
+          <span class="ann" id="ann-g">g</span>
+          <span class="ann" id="ann-begin">BEGIN</span>
+          <span class="ann-spacer"></span>
+          <span class="ann" id="ann-prgm">PRGM</span>
+          <span class="ann" id="ann-dmy">D.MY</span>
+          <span class="ann" id="ann-c">C</span>
+        </div>
+        <div class="display-main" id="display">0.00</div>
+        <div class="stack-display">
+          <div class="stack-reg"><span class="reg-name">T</span><span class="reg-val" id="reg-t">0</span></div>
+          <div class="stack-reg"><span class="reg-name">Z</span><span class="reg-val" id="reg-z">0</span></div>
+          <div class="stack-reg"><span class="reg-name">Y</span><span class="reg-val" id="reg-y">0</span></div>
+        </div>
+      </div>
+
+      <!-- Mode bar -->
+      <div class="mode-bar">
+        <div class="mode-indicator" id="mode-sto">STO</div>
+        <div class="mode-indicator" id="mode-rcl">RCL</div>
+        <div class="mode-indicator" id="mode-gto">GTO</div>
+        <div class="mode-indicator" id="mode-fix">FIX</div>
+        <div class="mode-indicator" id="mode-sci">SCI</div>
+        <div class="mode-indicator" id="mode-eng">ENG</div>
+      </div>
+    </div>
+
+    <!-- Keypad -->
+    <div class="keypad" id="keypad">
+
+      <!-- Row 0: TVM -->
+      <div class="key tvm" data-key="n">
+        <span class="key-f-label">AMORT</span>
+        <span class="key-main">n</span>
+        <span class="key-g-label">12×</span>
+      </div>
+      <div class="key tvm" data-key="i">
+        <span class="key-f-label">INT</span>
+        <span class="key-main">i</span>
+        <span class="key-g-label">12÷</span>
+      </div>
+      <div class="key tvm" data-key="pv">
+        <span class="key-f-label">NPV</span>
+        <span class="key-main">PV</span>
+        <span class="key-g-label">CFo</span>
+      </div>
+      <div class="key tvm" data-key="pmt">
+        <span class="key-f-label">RND</span>
+        <span class="key-main">PMT</span>
+        <span class="key-g-label">CFj</span>
+      </div>
+      <div class="key tvm" data-key="fv">
+        <span class="key-f-label">IRR</span>
+        <span class="key-main">FV</span>
+        <span class="key-g-label">Nj</span>
+      </div>
+
+      <div class="keypad-divider"></div>
+
+      <!-- Row 1 -->
+      <div class="key" data-key="chs">
+        <span class="key-f-label">DATE</span>
+        <span class="key-main">CHS</span>
+        <span class="key-g-label">D.MY</span>
+      </div>
+      <div class="key digit" data-key="7">
+        <span class="key-f-label">FIX</span>
+        <span class="key-main">7</span>
+        <span class="key-g-label">DEG</span>
+      </div>
+      <div class="key digit" data-key="8">
+        <span class="key-f-label">SCI</span>
+        <span class="key-main">8</span>
+        <span class="key-g-label">RAD</span>
+      </div>
+      <div class="key digit" data-key="9">
+        <span class="key-f-label">ENG</span>
+        <span class="key-main">9</span>
+        <span class="key-g-label">GRD</span>
+      </div>
+      <div class="key" data-key="div">
+        <span class="key-f-label">Δ%</span>
+        <span class="key-main">÷</span>
+        <span class="key-g-label">x≤y</span>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="key" data-key="sqrt">
+        <span class="key-f-label">√</span>
+        <span class="key-main">√x</span>
+        <span class="key-g-label">x²</span>
+      </div>
+      <div class="key digit" data-key="4">
+        <span class="key-f-label">x̄,ȳ</span>
+        <span class="key-main">4</span>
+        <span class="key-g-label">Δ%</span>
+      </div>
+      <div class="key digit" data-key="5">
+        <span class="key-f-label">yhat</span>
+        <span class="key-main">5</span>
+        <span class="key-g-label">%T</span>
+      </div>
+      <div class="key digit" data-key="6">
+        <span class="key-f-label">s,σ</span>
+        <span class="key-main">6</span>
+        <span class="key-g-label">%</span>
+      </div>
+      <div class="key" data-key="mul">
+        <span class="key-f-label">%T</span>
+        <span class="key-main">×</span>
+        <span class="key-g-label">x=0</span>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="key" data-key="inv">
+        <span class="key-f-label">eˣ</span>
+        <span class="key-main">1/x</span>
+        <span class="key-g-label">LN</span>
+      </div>
+      <div class="key digit" data-key="1">
+        <span class="key-f-label">PRICE</span>
+        <span class="key-main">1</span>
+        <span class="key-g-label">INT</span>
+      </div>
+      <div class="key digit" data-key="2">
+        <span class="key-f-label">YTM</span>
+        <span class="key-main">2</span>
+        <span class="key-g-label">FRAC</span>
+      </div>
+      <div class="key digit" data-key="3">
+        <span class="key-f-label">ΔDYS</span>
+        <span class="key-main">3</span>
+        <span class="key-g-label">ABS</span>
+      </div>
+      <div class="key" data-key="sub">
+        <span class="key-f-label">Re→P</span>
+        <span class="key-main">−</span>
+        <span class="key-g-label">x&gt;0</span>
+      </div>
+
+      <!-- Row 4 -->
+      <div class="key" data-key="pow">
+        <span class="key-f-label">10ˣ</span>
+        <span class="key-main">yˣ</span>
+        <span class="key-g-label">LOG</span>
+      </div>
+      <div class="key digit" data-key="0">
+        <span class="key-f-label">L.R.</span>
+        <span class="key-main">0</span>
+        <span class="key-g-label">x̄</span>
+      </div>
+      <div class="key" data-key="dot">
+        <span class="key-f-label">SEED</span>
+        <span class="key-main">·</span>
+        <span class="key-g-label">s,r</span>
+      </div>
+      <div class="key" data-key="sigma">
+        <span class="key-f-label">Σ</span>
+        <span class="key-main">Σ+</span>
+        <span class="key-g-label">Σ−</span>
+      </div>
+      <div class="key" data-key="add">
+        <span class="key-f-label">LAST x</span>
+        <span class="key-main">+</span>
+        <span class="key-g-label">LAST x</span>
+      </div>
+
+      <!-- Row 5: control row -->
+      <div class="key key-on" data-key="on">
+        <span class="key-main">ON</span>
+      </div>
+      <div class="key key-f" id="fkey" data-key="f">
+        <span class="key-main">f</span>
+      </div>
+      <div class="key key-g" id="gkey" data-key="g">
+        <span class="key-main">g</span>
+      </div>
+      <div class="key key-clx" data-key="clx">
+        <span class="key-f-label">CLR</span>
+        <span class="key-main">CLx</span>
+        <span class="key-g-label">x↔y</span>
+      </div>
+      <div class="key key-enter" data-key="enter">
+        <span class="key-f-label">P/R</span>
+        <span class="key-main">ENTER</span>
+        <span class="key-g-label">Rv</span>
+      </div>
+
+      <!-- Row 6: STO / RCL / math extras -->
+      <div class="key" data-key="sto">
+        <span class="key-f-label">CF0</span>
+        <span class="key-main">STO</span>
+        <span class="key-g-label">RCL</span>
+      </div>
+      <div class="key" data-key="rcl">
+        <span class="key-f-label">—</span>
+        <span class="key-main">RCL</span>
+        <span class="key-g-label">—</span>
+      </div>
+      <div class="key" data-key="eex">
+        <span class="key-f-label">—</span>
+        <span class="key-main">EEX</span>
+        <span class="key-g-label">π</span>
+      </div>
+      <div class="key" data-key="gto">
+        <span class="key-f-label">—</span>
+        <span class="key-main">GTO</span>
+        <span class="key-g-label">—</span>
+      </div>
+      <div class="key" data-key="run">
+        <span class="key-f-label">SST</span>
+        <span class="key-main">R/S</span>
+        <span class="key-g-label">BST</span>
+      </div>
+
+    </div><!-- end keypad -->
+  </div><!-- end calculator -->
+</div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const state = {
+  // RPN 4-level stack
+  stack: { X: 0, Y: 0, Z: 0, T: 0 },
+  lastX: 0,
+
+  // Display
+  displayStr: '0',
+  isEnteringNumber: false,
+  hasDecimal: false,
+  isEnteringExponent: false,
+  exponentStr: '',
+  stackLiftEnabled: true,
+
+  // Shift
+  shiftF: false,
+  shiftG: false,
+
+  // Modes
+  fixMode: 2,        // -1 = float, 0-9 = fixed
+  sciMode: false,
+  engMode: false,
+  beginMode: false,  // false = END (default)
+  dmyMode: false,    // false = MDY, true = DMY
+  gradMode: false,
+
+  // Pending modes after shift
+  stoMode: false,
+  rclMode: false,
+  gtoMode: false,
+  fixPending: false,
+  sciPending: false,
+  engPending: false,
+  cfMode: false,     // CF entry mode
+  cfIndex: 0,        // which cash flow
+
+  // TVM financial registers
+  tvm: { n: 0, i: 0, pv: 0, pmt: 0, fv: 0 },
+
+  // Cash flow registers for IRR/NPV
+  cf: [],     // [{ amount, times }]
+
+  // Memory registers R0..R9
+  mem: Array(10).fill(0),
+
+  // Statistics accumulators (R1..R6)
+  stats: { n: 0, sumX: 0, sumX2: 0, sumY: 0, sumY2: 0, sumXY: 0 },
+
+  // Program storage
+  program: [],
+  programMode: false,
+  programCounter: 0,
+  programRunning: false,
+  lastInputWasEnter: false,
+};
+
+/* =========================================================
+   DISPLAY
+   ========================================================= */
+function formatNumber(n, forceFloat) {
+  if (!isFinite(n)) return n > 0 ? '9.99999E 99' : '-9.99999E 99';
+  if (isNaN(n)) return 'Error';
+
+  const absN = Math.abs(n);
+
+  if (forceFloat) {
+    // Compact display for stack peek
+    if (absN === 0) return '0';
+    if (absN >= 1e8 || (absN < 1e-4 && absN > 0)) {
+      return n.toExponential(3);
+    }
+    const s = parseFloat(n.toPrecision(7)).toString();
+    return s;
+  }
+
+  // Scientific / Engineering
+  if (state.sciMode) return formatSci(n);
+  if (state.engMode) return formatEng(n);
+
+  // Fixed
+  if (state.fixMode >= 0) {
+    if (absN >= 1e10) return formatSci(n);
+    return n.toFixed(state.fixMode);
+  }
+
+  // Auto float (9 significant digits)
+  if (absN === 0) return '0';
+  if (absN >= 1e10 || (absN < 1e-6 && absN > 0)) return formatSci(n);
+  return parseFloat(n.toPrecision(9)).toString();
+}
+
+function formatSci(n) {
+  if (n === 0) return '0.000000000E+00';
+  const exp = Math.floor(Math.log10(Math.abs(n)));
+  const mantissa = n / Math.pow(10, exp);
+  const places = state.fixMode >= 0 ? state.fixMode : 8;
+  const mStr = mantissa.toFixed(Math.min(places, 9));
+  const eStr = (exp >= 0 ? '+' : '') + String(exp).padStart(2, '0');
+  return mStr + 'E' + eStr;
+}
+
+function formatEng(n) {
+  if (n === 0) return '0.000000000E+00';
+  const exp = Math.floor(Math.log10(Math.abs(n)));
+  const engExp = Math.floor(exp / 3) * 3;
+  const mantissa = n / Math.pow(10, engExp);
+  const places = state.fixMode >= 0 ? state.fixMode : 8;
+  const mStr = mantissa.toFixed(Math.min(places, 9));
+  const eStr = (engExp >= 0 ? '+' : '') + String(engExp).padStart(2, '0');
+  return mStr + 'E' + eStr;
+}
+
+function updateDisplay() {
+  const disp = document.getElementById('display');
+  let txt;
+
+  if (state.isEnteringNumber) {
+    txt = state.displayStr;
+    if (state.isEnteringExponent) txt += 'E' + state.exponentStr;
+  } else {
+    txt = formatNumber(state.stack.X);
+  }
+
+  disp.textContent = txt;
+  disp.classList.remove('error');
+
+  // Stack peek
+  document.getElementById('reg-y').textContent = formatNumber(state.stack.Y, true);
+  document.getElementById('reg-z').textContent = formatNumber(state.stack.Z, true);
+  document.getElementById('reg-t').textContent = formatNumber(state.stack.T, true);
+
+  // Annunciators
+  setAnn('ann-f', state.shiftF);
+  setAnn('ann-g', state.shiftG);
+  setAnn('ann-begin', state.beginMode);
+  setAnn('ann-prgm', state.programMode);
+  setAnn('ann-dmy', state.dmyMode);
+
+  // Mode indicators
+  setMode('mode-sto', state.stoMode);
+  setMode('mode-rcl', state.rclMode);
+  setMode('mode-gto', state.gtoMode);
+  setMode('mode-fix', state.fixPending);
+  setMode('mode-sci', state.sciPending);
+  setMode('mode-eng', state.engPending);
+
+  // Shift key highlights
+  document.getElementById('fkey').classList.toggle('shift-active', state.shiftF);
+  document.getElementById('gkey').classList.toggle('shift-active', state.shiftG);
+  document.body.classList.toggle('shift-f', state.shiftF);
+  document.body.classList.toggle('shift-g', state.shiftG);
+}
+
+function setAnn(id, active) {
+  document.getElementById(id).classList.toggle('active', !!active);
+}
+
+function setMode(id, active) {
+  document.getElementById(id).classList.toggle('active', !!active);
+}
+
+let _errorShowing = false;
+function showError(msg) {
+  const disp = document.getElementById('display');
+  disp.textContent = msg || 'Error';
+  disp.classList.add('error');
+  state.isEnteringNumber = false;
+  state.stackLiftEnabled = true;
+  _errorShowing = true;
+  setTimeout(() => {
+    _errorShowing = false;
+    disp.classList.remove('error');
+    updateDisplay();
+  }, 1400);
+}
+
+/* =========================================================
+   RPN STACK OPERATIONS
+   ========================================================= */
+function getX() {
+  if (state.isEnteringNumber) {
+    const val = parseCurrentEntry();
+    return val;
+  }
+  return state.stack.X;
+}
+
+function parseCurrentEntry() {
+  if (state.isEnteringExponent) {
+    const m = parseFloat(state.displayStr) || 0;
+    const e = parseInt(state.exponentStr, 10) || 0;
+    return m * Math.pow(10, e);
+  }
+  return parseFloat(state.displayStr) || 0;
+}
+
+function commitEntry() {
+  if (state.isEnteringNumber) {
+    state.stack.X = parseCurrentEntry();
+    state.isEnteringNumber = false;
+    state.hasDecimal = false;
+    state.isEnteringExponent = false;
+    state.exponentStr = '';
+    state.stackLiftEnabled = true;
+  }
+}
+
+function liftStack() {
+  state.stack.T = state.stack.Z;
+  state.stack.Z = state.stack.Y;
+  state.stack.Y = state.stack.X;
+}
+
+function dropStack() {
+  state.stack.X = state.stack.Y;
+  state.stack.Y = state.stack.Z;
+  state.stack.Z = state.stack.T;
+  // T stays
+}
+
+function pushX(val) {
+  liftStack();
+  state.stack.X = val;
+  state.stackLiftEnabled = true;
+}
+
+function saveLastX() {
+  state.lastX = state.stack.X;
+}
+
+/* =========================================================
+   DIGIT INPUT
+   ========================================================= */
+function inputDigit(d) {
+  clearPendingModes();
+  if (state.isEnteringExponent) {
+    if (state.exponentStr.replace('-', '').length < 2) {
+      state.exponentStr += d;
+    }
+    updateDisplay();
+    return;
+  }
+  if (!state.isEnteringNumber) {
+    if (state.stackLiftEnabled) liftStack();
+    state.displayStr = d === '0' ? '0' : d;
+    state.isEnteringNumber = true;
+    state.hasDecimal = false;
+  } else {
+    if (state.displayStr === '0' && d !== '.') state.displayStr = d;
+    else if (state.displayStr.replace('-', '').length < 10) state.displayStr += d;
+  }
+  state.stack.X = parseFloat(state.displayStr) || 0;
+  updateDisplay();
+}
+
+function inputDecimal() {
+  clearPendingModes();
+  if (state.isEnteringExponent) return;
+  if (!state.isEnteringNumber) {
+    if (state.stackLiftEnabled) liftStack();
+    state.displayStr = '0.';
+    state.isEnteringNumber = true;
+    state.hasDecimal = true;
+  } else if (!state.hasDecimal) {
+    state.displayStr += '.';
+    state.hasDecimal = true;
+  }
+  state.stack.X = parseFloat(state.displayStr) || 0;
+  updateDisplay();
+}
+
+function clearPendingModes() {
+  // If no digit mode pending, cancel modifier modes that need a digit
+  // (called before digit handling, not for op keys)
+}
+
+/* =========================================================
+   KEY HANDLERS
+   ========================================================= */
+function handleKey(key) {
+  // Handle pending STO / RCL / GTO / FIX / SCI / ENG modes
+  if (state.stoMode) {
+    handleStoTarget(key);
+    return;
+  }
+  if (state.rclMode) {
+    handleRclTarget(key);
+    return;
+  }
+  if (state.gtoMode) {
+    handleGtoTarget(key);
+    return;
+  }
+  if (state.fixPending) {
+    handleFixTarget(key, 'fix');
+    return;
+  }
+  if (state.sciPending) {
+    handleFixTarget(key, 'sci');
+    return;
+  }
+  if (state.engPending) {
+    handleFixTarget(key, 'eng');
+    return;
+  }
+
+  const isF = state.shiftF;
+  const isG = state.shiftG;
+  state.shiftF = false;
+  state.shiftG = false;
+
+  switch (key) {
+    case 'dot':
+      inputDecimal();
+      break;
+
+    // --- Shift keys ---
+    case 'f':
+      state.shiftF = !state.shiftF;
+      if (state.shiftF) state.shiftG = false;
+      updateDisplay();
+      break;
+    case 'g':
+      state.shiftG = !state.shiftG;
+      if (state.shiftG) state.shiftF = false;
+      updateDisplay();
+      break;
+
+    // --- ENTER ---
+    case 'enter':
+      if (isF) { toggleProgramMode(); break; }
+      if (isG) { rollDown(); break; }
+      commitEntry();
+      // Lift stack: T←Z, Z←Y, Y←X  (X stays = duplicate)
+      state.stack.T = state.stack.Z;
+      state.stack.Z = state.stack.Y;
+      state.stack.Y = state.stack.X;
+      // X unchanged (duplicated into Y)
+      state.stackLiftEnabled = false; // next digit will overwrite X without lifting
+      state.isEnteringNumber = false;
+      updateDisplay();
+      break;
+
+    // --- CLx ---
+    case 'clx':
+      if (isF) { clearAll(); break; }
+      if (isG) { swapXY(); break; }
+      commitEntry();
+      state.stack.X = 0;
+      state.displayStr = '0';
+      state.isEnteringNumber = false;
+      state.hasDecimal = false;
+      state.isEnteringExponent = false;
+      state.exponentStr = '';
+      state.stackLiftEnabled = false;
+      updateDisplay();
+      break;
+
+    // --- Arithmetic ---
+    case 'add':
+      if (isF) { recallLastX(); break; }
+      if (isG) { recallLastX(); break; }
+      binaryOp((y, x) => y + x);
+      break;
+
+    case 'sub':
+      if (isF) { convertRectPolar(); break; }
+      if (isG) { conditionalXGT0(); break; }
+      binaryOp((y, x) => y - x);
+      break;
+
+    case 'mul':
+      if (isF) { percentTotal(); break; }
+      if (isG) { conditionalXEQ0(); break; }
+      binaryOp((y, x) => y * x);
+      break;
+
+    case 'div':
+      if (isF) { percentDelta(); break; }
+      if (isG) { conditionalXLE0(); break; }
+      binaryOp((y, x) => {
+        if (x === 0) { showError(' Error 0  '); return NaN; }
+        return y / x;
+      });
+      break;
+
+    // --- Math ---
+    case 'sqrt':
+      if (isG) { unaryOp(x => x * x); break; }
+      unaryOp(x => {
+        if (x < 0) { showError(' Error 0  '); return NaN; }
+        return Math.sqrt(x);
+      });
+      break;
+
+    case 'inv':
+      if (isF) { unaryOp(x => Math.exp(x)); break; }
+      if (isG) { unaryOp(x => { if (x <= 0) { showError(' Error 0  '); return NaN; } return Math.log(x); }); break; }
+      unaryOp(x => {
+        if (x === 0) { showError(' Error 0  '); return NaN; }
+        return 1 / x;
+      });
+      break;
+
+    case 'pow':
+      if (isF) { unaryOp(x => Math.pow(10, x)); break; }
+      if (isG) { unaryOp(x => { if (x <= 0) { showError(' Error 0  '); return NaN; } return Math.log10(x); }); break; }
+      binaryOp((y, x) => {
+        if (y < 0 && !Number.isInteger(x)) { showError(' Error 0  '); return NaN; }
+        return Math.pow(y, x);
+      });
+      break;
+
+    // --- CHS ---
+    case 'chs':
+      if (isF) { opDateAdd(); break; }
+      if (isG) { toggleDMY(); break; }
+      if (state.isEnteringExponent) {
+        state.exponentStr = state.exponentStr.startsWith('-')
+          ? state.exponentStr.slice(1)
+          : '-' + state.exponentStr;
+      } else if (state.isEnteringNumber) {
+        state.displayStr = state.displayStr.startsWith('-')
+          ? state.displayStr.slice(1)
+          : '-' + state.displayStr;
+        state.stack.X = parseFloat(state.displayStr) || 0;
+      } else {
+        saveLastX();
+        state.stack.X = -state.stack.X;
+      }
+      break;
+
+    // --- EEX ---
+    case 'eex':
+      if (isG) { pushX(Math.PI); break; }
+      if (!state.isEnteringNumber) {
+        if (state.stackLiftEnabled) liftStack();
+        state.displayStr = '1';
+        state.isEnteringNumber = true;
+        state.hasDecimal = false;
+      }
+      if (!state.isEnteringExponent) {
+        state.isEnteringExponent = true;
+        state.exponentStr = '0';
+      }
+      break;
+
+    // --- TVM ---
+    case 'n':
+      if (isF) { doAmort(); break; }
+      if (isG) { do12x(); break; }
+      tvmStore('n');
+      break;
+    case 'i':
+      if (isF) { doInterestConvert(); break; }
+      if (isG) { do12div(); break; }
+      tvmStore('i');
+      break;
+    case 'pv':
+      if (isF) { doNPV(); break; }
+      if (isG) { storeCFo(); break; }
+      tvmStore('pv');
+      break;
+    case 'pmt':
+      if (isF) { doRND(); break; }
+      if (isG) { storeCFj(); break; }
+      tvmStore('pmt');
+      break;
+    case 'fv':
+      if (isF) { doIRR(); break; }
+      if (isG) { storeNj(); break; }
+      tvmStore('fv');
+      break;
+
+    // --- Statistics ---
+    case 'sigma':
+      if (isG) { sigmaRemove(); break; }
+      sigmaPlus();
+      break;
+
+    // --- Digits with alt functions ---
+    case '0':
+      if (isF) { doLinearRegression(); break; }
+      if (isG) { doMeanX(); break; }
+      inputDigit('0');
+      break;
+    case '4':
+      if (isF) { doMeanXY(); break; }
+      if (isG) { percentDelta(); break; }
+      inputDigit('4');
+      break;
+    case '5':
+      if (isF) { doYhat(); break; }
+      if (isG) { percentTotal(); break; }
+      inputDigit('5');
+      break;
+    case '6':
+      if (isF) { doStdDev(); break; }
+      if (isG) { doPercent(); break; }
+      inputDigit('6');
+      break;
+    case '1':
+      if (isF) { doBondPrice(); break; }
+      if (isG) { unaryOp(x => Math.trunc(x)); break; }
+      inputDigit('1');
+      break;
+    case '2':
+      if (isF) { doBondYTM(); break; }
+      if (isG) { unaryOp(x => x - Math.trunc(x)); break; }
+      inputDigit('2');
+      break;
+    case '3':
+      if (isF) { doDeltaDays(); break; }
+      if (isG) { unaryOp(x => Math.abs(x)); break; }
+      inputDigit('3');
+      break;
+    case '7':
+      if (isF) { triggerFIX(); break; }
+      if (isG) { /* DEG already default */ break; }
+      inputDigit('7');
+      break;
+    case '8':
+      if (isF) { triggerSCI(); break; }
+      if (isG) { /* RAD - toggle trig mode */ break; }
+      inputDigit('8');
+      break;
+    case '9':
+      if (isF) { triggerENG(); break; }
+      if (isG) { state.gradMode = !state.gradMode; updateDisplay(); break; }
+      inputDigit('9');
+      break;
+
+    // --- BEGIN/END toggle (g + BEG = begin mode, assigned to 'run' g-shift here) ---
+    // Actually handled via sigma g = Sigma-minus, but let's add BEG/END to a key
+    // In HP 12C: g + 7 = BEG (begin annuity mode) per some variants; use g+sigma here
+    // We'll add it as g+sto = BEGIN toggle
+    case 'sto':
+      if (isF) { state.stoMode = true; break; }
+      if (isG) { state.beginMode = !state.beginMode; break; }
+      state.stoMode = true;
+      break;
+    case 'rcl':
+      state.rclMode = true;
+      break;
+
+    // --- GTO ---
+    case 'gto':
+      state.gtoMode = true;
+      break;
+
+    // --- R/S ---
+    case 'run':
+      if (isF) { stepProgram(1); break; }
+      if (isG) { stepProgram(-1); break; }
+      runProgram();
+      break;
+
+    // --- ON ---
+    case 'on':
+      clearAll();
+      break;
+
+    default:
+      break;
+  }
+
+  if (!_errorShowing) updateDisplay();
+}
+
+/* =========================================================
+   BINARY / UNARY OPS
+   ========================================================= */
+function binaryOp(fn) {
+  commitEntry();
+  saveLastX();
+  const x = state.stack.X;
+  const y = state.stack.Y;
+  const result = fn(y, x);
+  if (isNaN(result)) return;
+  state.stack.X = result;
+  state.stack.Y = state.stack.Z;
+  state.stack.Z = state.stack.T;
+  // T stays (HP 12C behavior: T replicated on drop)
+  state.stackLiftEnabled = true;
+}
+
+function unaryOp(fn) {
+  commitEntry();
+  saveLastX();
+  const result = fn(state.stack.X);
+  if (isNaN(result)) return;
+  state.stack.X = result;
+  state.stackLiftEnabled = true;
+}
+
+/* =========================================================
+   STACK OPS
+   ========================================================= */
+function swapXY() {
+  commitEntry();
+  const tmp = state.stack.X;
+  state.stack.X = state.stack.Y;
+  state.stack.Y = tmp;
+  state.stackLiftEnabled = true;
+}
+
+function rollDown() {
+  commitEntry();
+  const tmp = state.stack.X;
+  state.stack.X = state.stack.Y;
+  state.stack.Y = state.stack.Z;
+  state.stack.Z = state.stack.T;
+  state.stack.T = tmp;
+  state.stackLiftEnabled = true;
+}
+
+function recallLastX() {
+  commitEntry();
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = state.lastX;
+  state.stackLiftEnabled = true;
+}
+
+/* =========================================================
+   CLEAR
+   ========================================================= */
+function clearAll() {
+  state.stack = { X: 0, Y: 0, Z: 0, T: 0 };
+  state.lastX = 0;
+  state.displayStr = '0';
+  state.isEnteringNumber = false;
+  state.hasDecimal = false;
+  state.isEnteringExponent = false;
+  state.exponentStr = '';
+  state.stackLiftEnabled = true;
+  state.shiftF = false;
+  state.shiftG = false;
+  state.stoMode = false;
+  state.rclMode = false;
+  state.gtoMode = false;
+  state.fixPending = false;
+  state.sciPending = false;
+  state.engPending = false;
+  state.fixMode = 2;
+  state.sciMode = false;
+  state.engMode = false;
+  state.beginMode = false;
+  state.dmyMode = false;
+  state.gradMode = false;
+  state.programMode = false;
+  state.programCounter = 0;
+  state.programRunning = false;
+  state.tvm = { n: 0, i: 0, pv: 0, pmt: 0, fv: 0 };
+  state.cf = [];
+  state.stats = { n: 0, sumX: 0, sumX2: 0, sumY: 0, sumY2: 0, sumXY: 0 };
+  state.mem = Array(10).fill(0);
+  updateDisplay();
+}
+
+/* =========================================================
+   STO / RCL / GTO TARGET HANDLERS
+   ========================================================= */
+const DIGIT_KEYS = ['0','1','2','3','4','5','6','7','8','9'];
+const TVM_KEYS = ['n','i','pv','pmt','fv'];
+
+function handleStoTarget(key) {
+  commitEntry();
+  const idx = parseInt(key, 10);
+  if (!isNaN(idx) && idx >= 0 && idx <= 9) {
+    state.mem[idx] = state.stack.X;
+    state.stoMode = false;
+    updateDisplay();
+    return;
+  }
+  // STO +, -, *, /
+  if (['+','add','sub','mul','div','-','*','/'].includes(key)) {
+    // Arithmetic store: next digit will be register
+    // simplified: just cancel
+    state.stoMode = false;
+    updateDisplay();
+    return;
+  }
+  // STO to TVM key
+  if (TVM_KEYS.includes(key)) {
+    state.tvm[key] = state.stack.X;
+    state.stoMode = false;
+    updateDisplay();
+    return;
+  }
+  state.stoMode = false;
+  updateDisplay();
+}
+
+function handleRclTarget(key) {
+  const idx = parseInt(key, 10);
+  if (!isNaN(idx) && idx >= 0 && idx <= 9) {
+    if (state.stackLiftEnabled) liftStack();
+    state.stack.X = state.mem[idx];
+    state.stackLiftEnabled = true;
+    state.rclMode = false;
+    updateDisplay();
+    return;
+  }
+  if (TVM_KEYS.includes(key)) {
+    if (state.stackLiftEnabled) liftStack();
+    state.stack.X = state.tvm[key];
+    state.stackLiftEnabled = true;
+    state.rclMode = false;
+    updateDisplay();
+    return;
+  }
+  // RCL LAST x shortcut
+  if (key === 'add') {
+    recallLastX();
+    state.rclMode = false;
+    return;
+  }
+  state.rclMode = false;
+  updateDisplay();
+}
+
+function handleGtoTarget(key) {
+  const idx = parseInt(key, 10);
+  if (!isNaN(idx)) {
+    state.programCounter = Math.min(idx, state.program.length);
+  }
+  state.gtoMode = false;
+  updateDisplay();
+}
+
+function handleFixTarget(key, mode) {
+  const n = parseInt(key, 10);
+  state.fixPending = false;
+  state.sciPending = false;
+  state.engPending = false;
+  if (!isNaN(n) && n >= 0 && n <= 9) {
+    if (mode === 'fix') {
+      state.fixMode = n;
+      state.sciMode = false;
+      state.engMode = false;
+    } else if (mode === 'sci') {
+      state.fixMode = n;
+      state.sciMode = true;
+      state.engMode = false;
+    } else if (mode === 'eng') {
+      state.fixMode = n;
+      state.engMode = true;
+      state.sciMode = false;
+    }
+  }
+  updateDisplay();
+}
+
+function triggerFIX() {
+  commitEntry();
+  state.fixPending = true;
+  state.sciPending = false;
+  state.engPending = false;
+  updateDisplay();
+}
+
+function triggerSCI() {
+  commitEntry();
+  state.sciPending = true;
+  state.fixPending = false;
+  state.engPending = false;
+  updateDisplay();
+}
+
+function triggerENG() {
+  commitEntry();
+  state.engPending = true;
+  state.fixPending = false;
+  state.sciPending = false;
+  updateDisplay();
+}
+
+/* =========================================================
+   TVM
+   ========================================================= */
+function tvmStore(reg) {
+  commitEntry();
+  const val = state.stack.X;
+  state.tvm[reg] = val;
+
+  // Try to solve for the missing TVM variable if 4 are known
+  // (HP 12C: pressing the key stores that value; to solve, press key when it's the unknown)
+  // In actual HP 12C, you store 4 values then press the 5th key to compute.
+  // Here: if we can determine we're solving, compute.
+  // Simple approach: pressing a TVM key stores and solves IF value is same as already stored
+  // Better: pressing key ALWAYS stores current X, stackLiftEnabled for next
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function tvmSolveFor(unknown) {
+  // Make a copy of tvm
+  const { n, i, pv, pmt, fv } = state.tvm;
+  const r = i / 100; // per-period rate
+
+  let result;
+  try {
+    switch (unknown) {
+      case 'n':
+        result = solveN(r, pv, pmt, fv);
+        break;
+      case 'i':
+        result = solveI(n, pv, pmt, fv);
+        break;
+      case 'pv':
+        result = solvePV(n, r, pmt, fv);
+        break;
+      case 'pmt':
+        result = solvePMT(n, r, pv, fv);
+        break;
+      case 'fv':
+        result = solveFV(n, r, pv, pmt);
+        break;
+    }
+  } catch(e) {
+    showError(' Error 5  ');
+    return;
+  }
+
+  if (result === null || isNaN(result) || !isFinite(result)) {
+    showError(' Error 5  ');
+    return;
+  }
+
+  state.tvm[unknown] = result;
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = result;
+  state.stackLiftEnabled = true;
+}
+
+// BEGIN/END affects annuity type
+// type=0: END (ordinary annuity), type=1: BEGIN (annuity due)
+function annuityFactor(n, r) {
+  if (r === 0) return n;
+  const factor = (1 - Math.pow(1 + r, -n)) / r;
+  return state.beginMode ? factor * (1 + r) : factor;
+}
+
+function solvePV(n, r, pmt, fv) {
+  if (r === 0) return -(pmt * n + fv);
+  const af = annuityFactor(n, r);
+  return -(pmt * af + fv * Math.pow(1 + r, -n));
+}
+
+function solveFV(n, r, pv, pmt) {
+  if (r === 0) return -(pv + pmt * n);
+  const af = annuityFactor(n, r);
+  return -(pv * Math.pow(1 + r, n) + pmt * af * Math.pow(1 + r, n));
+}
+
+function solvePMT(n, r, pv, fv) {
+  if (r === 0) {
+    if (n === 0) { showError(' Error 0  '); return null; }
+    return -(pv + fv) / n;
+  }
+  const af = annuityFactor(n, r);
+  if (af === 0) { showError(' Error 0  '); return null; }
+  return -(pv * Math.pow(1 + r, n) + fv) / (af * Math.pow(1 + r, n));
+}
+
+function solveN(r, pv, pmt, fv) {
+  if (r === 0) {
+    if (pmt === 0) return null;
+    return -(pv + fv) / pmt;
+  }
+  // Newton-Raphson or closed form when possible
+  if (pmt === 0) {
+    if (pv === 0 || fv === 0) return null;
+    return -Math.log(fv / pv) / Math.log(1 + r);
+  }
+  // Iterative
+  const sign = (pmt > 0) ? 1 : -1;
+  let n = 1;
+  for (let iter = 0; iter < 500; iter++) {
+    const fn = pv + pmt * annuityFactorN(n, r) + fv * Math.pow(1+r,-n);
+    const dfn = pmt * dAnnuityFactor(n, r) - fv * Math.log(1+r) * Math.pow(1+r,-n);
+    const delta = fn / dfn;
+    n -= delta;
+    if (Math.abs(delta) < 1e-8) break;
+  }
+  return n;
+}
+
+function annuityFactorN(n, r) {
+  const factor = (1 - Math.pow(1+r,-n))/r;
+  return state.beginMode ? factor*(1+r) : factor;
+}
+
+function dAnnuityFactor(n, r) {
+  const d = Math.log(1+r) * Math.pow(1+r,-n) / r;
+  return state.beginMode ? d*(1+r) : d;
+}
+
+function solveI(n, pv, pmt, fv) {
+  if (n === 0) return 0;
+  // Newton-Raphson
+  let r = 0.1 / 12; // initial guess
+  for (let iter = 0; iter < 500; iter++) {
+    const fn = tvmEquation(n, r, pv, pmt, fv);
+    const dfn = dTvmEquation(n, r, pv, pmt, fv);
+    if (Math.abs(dfn) < 1e-15) break;
+    const delta = fn / dfn;
+    r -= delta;
+    if (r < -0.9999) r = -0.9999;
+    if (Math.abs(delta) < 1e-10) break;
+  }
+  return r * 100;
+}
+
+function tvmEquation(n, r, pv, pmt, fv) {
+  if (r === 0) return pv + pmt * n + fv;
+  const af = annuityFactorN(n, r);
+  return pv * Math.pow(1+r,n) + pmt * af * Math.pow(1+r,n) + fv;
+}
+
+function dTvmEquation(n, r, pv, pmt, fv) {
+  const h = 1e-7;
+  return (tvmEquation(n, r+h, pv, pmt, fv) - tvmEquation(n, r-h, pv, pmt, fv)) / (2*h);
+}
+
+/* =========================================================
+   TVM — HP 12C behavior: pressing a TVM key:
+   - If we're entering a number: store it in that register
+   - If not entering: COMPUTE that unknown from the others
+   ========================================================= */
+function handleTVMKey(reg) {
+  const isF = state.shiftF;
+  const isG = state.shiftG;
+  state.shiftF = false;
+  state.shiftG = false;
+
+  if (isF || isG) return; // handled in main handleKey
+
+  if (state.isEnteringNumber) {
+    commitEntry();
+    state.tvm[reg] = state.stack.X;
+    state.stackLiftEnabled = true;
+  } else {
+    tvmSolveFor(reg);
+  }
+  updateDisplay();
+}
+
+/* =========================================================
+   AMORTIZATION
+   ========================================================= */
+function doAmort() {
+  commitEntry();
+  const periods = Math.round(state.stack.X);
+  if (periods <= 0) { showError(' Error 0  '); return; }
+
+  const r = state.tvm.i / 100;
+  let balance = state.tvm.pv;
+  let totalInterest = 0;
+  let totalPrincipal = 0;
+  const pmt = state.tvm.pmt;
+
+  for (let k = 0; k < periods; k++) {
+    const interest = balance * r;
+    const principal = pmt + interest; // pmt is negative for loan payment
+    balance += principal;
+    totalInterest += interest;
+    totalPrincipal += principal;
+  }
+
+  // HP 12C: X = interest paid, Y = principal paid, Z = balance
+  state.stack.T = state.stack.Z;
+  state.stack.Z = balance;
+  state.stack.Y = totalPrincipal;
+  state.stack.X = totalInterest;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   IRR
+   ========================================================= */
+function doIRR() {
+  if (state.cf.length < 2) { showError(' Error 7  '); return; }
+
+  let rate = 0.1;
+  for (let iter = 0; iter < 500; iter++) {
+    let npv = state.cf[0].amount;
+    let dnpv = 0;
+    let period = 0;
+    for (let idx = 1; idx < state.cf.length; idx++) {
+      const { amount, times } = state.cf[idx];
+      for (let t = 0; t < times; t++) {
+        period++;
+        const disc = Math.pow(1 + rate, period);
+        npv += amount / disc;
+        dnpv -= period * amount / (disc * (1 + rate));
+      }
+    }
+    if (Math.abs(dnpv) < 1e-15) break;
+    const delta = npv / dnpv;
+    rate -= delta;
+    if (rate < -0.9999) rate = -0.9999;
+    if (Math.abs(delta) < 1e-8) break;
+  }
+
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = rate * 100;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   NPV
+   ========================================================= */
+function doNPV() {
+  if (state.cf.length === 0) { showError(' Error 7  '); return; }
+
+  const rate = state.tvm.i / 100;
+  let npv = state.cf[0].amount;
+  let period = 0;
+  for (let idx = 1; idx < state.cf.length; idx++) {
+    const { amount, times } = state.cf[idx];
+    for (let t = 0; t < times; t++) {
+      period++;
+      npv += amount / Math.pow(1 + rate, period);
+    }
+  }
+
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = npv;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   CASH FLOW STORAGE
+   ========================================================= */
+function storeCFo() {
+  commitEntry();
+  state.cf = [{ amount: state.stack.X, times: 1 }];
+  state.cfIndex = 1;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function storeCFj() {
+  commitEntry();
+  state.cf.push({ amount: state.stack.X, times: 1 });
+  state.cfIndex++;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function storeNj() {
+  commitEntry();
+  const n = Math.round(state.stack.X);
+  if (state.cf.length > 0) {
+    state.cf[state.cf.length - 1].times = n;
+  }
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   12× and 12÷
+   ========================================================= */
+function do12x() {
+  commitEntry();
+  state.tvm.n = state.stack.X * 12;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function do12div() {
+  commitEntry();
+  state.tvm.i = state.stack.X / 12;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   INTEREST CONVERSION
+   ========================================================= */
+function doInterestConvert() {
+  // f INT: converts between nominal and effective rates
+  // X = nominal rate, Y = compounding periods
+  commitEntry();
+  const nominal = state.stack.X;
+  const m = state.stack.Y;
+  if (m === 0) { showError(' Error 0  '); return; }
+  const effective = (Math.pow(1 + nominal/100/m, m) - 1) * 100;
+  state.stack.X = effective;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   STATISTICS
+   ========================================================= */
+function sigmaPlus() {
+  commitEntry();
+  const x = state.stack.X;
+  const y = state.stack.Y;
+  state.stats.n++;
+  state.stats.sumX += x;
+  state.stats.sumX2 += x * x;
+  state.stats.sumY += y;
+  state.stats.sumY2 += y * y;
+  state.stats.sumXY += x * y;
+  // Store in registers R1-R6
+  state.mem[1] = state.stats.n;
+  state.mem[2] = state.stats.sumX;
+  state.mem[3] = state.stats.sumX2;
+  state.mem[4] = state.stats.sumY;
+  state.mem[5] = state.stats.sumY2;
+  state.mem[6] = state.stats.sumXY;
+  // Show n in X
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = state.stats.n;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function sigmaRemove() {
+  commitEntry();
+  const x = state.stack.X;
+  const y = state.stack.Y;
+  state.stats.n--;
+  state.stats.sumX -= x;
+  state.stats.sumX2 -= x * x;
+  state.stats.sumY -= y;
+  state.stats.sumY2 -= y * y;
+  state.stats.sumXY -= x * y;
+  state.mem[1] = state.stats.n;
+  state.mem[2] = state.stats.sumX;
+  state.mem[3] = state.stats.sumX2;
+  state.mem[4] = state.stats.sumY;
+  state.mem[5] = state.stats.sumY2;
+  state.mem[6] = state.stats.sumXY;
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = state.stats.n;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function doMeanX() {
+  if (state.stats.n === 0) { showError(' Error 0  '); return; }
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = state.stats.sumX / state.stats.n;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function doMeanXY() {
+  if (state.stats.n === 0) { showError(' Error 0  '); return; }
+  const meanX = state.stats.sumX / state.stats.n;
+  const meanY = state.stats.sumY / state.stats.n;
+  state.stack.Y = meanY;
+  state.stack.X = meanX;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function doStdDev() {
+  if (state.stats.n < 2) { showError(' Error 0  '); return; }
+  const n = state.stats.n;
+  const sx = Math.sqrt((state.stats.sumX2 - state.stats.sumX*state.stats.sumX/n) / (n-1));
+  const sy = Math.sqrt((state.stats.sumY2 - state.stats.sumY*state.stats.sumY/n) / (n-1));
+  state.stack.Y = sy;
+  state.stack.X = sx;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function doLinearRegression() {
+  if (state.stats.n < 2) { showError(' Error 0  '); return; }
+  const n = state.stats.n;
+  const denom = n * state.stats.sumX2 - state.stats.sumX * state.stats.sumX;
+  if (denom === 0) { showError(' Error 0  '); return; }
+  const b = (n * state.stats.sumXY - state.stats.sumX * state.stats.sumY) / denom;
+  const a = (state.stats.sumY - b * state.stats.sumX) / n;
+  state.stack.Y = a;
+  state.stack.X = b;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function doYhat() {
+  // Predicted y for given x (X register), r in Y
+  if (state.stats.n < 2) { showError(' Error 0  '); return; }
+  const xVal = state.stack.X;
+  const n = state.stats.n;
+  const denom = n * state.stats.sumX2 - state.stats.sumX * state.stats.sumX;
+  if (denom === 0) { showError(' Error 0  '); return; }
+  const b = (n * state.stats.sumXY - state.stats.sumX * state.stats.sumY) / denom;
+  const a = (state.stats.sumY - b * state.stats.sumX) / n;
+  const yhat = a + b * xVal;
+  const r = denom === 0 ? 0 : (n * state.stats.sumXY - state.stats.sumX * state.stats.sumY) /
+    Math.sqrt(denom * (n * state.stats.sumY2 - state.stats.sumY * state.stats.sumY));
+  state.stack.Y = r;
+  state.stack.X = yhat;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   PERCENT FUNCTIONS
+   ========================================================= */
+function doPercent() {
+  commitEntry();
+  saveLastX();
+  const pct = state.stack.X;
+  const base = state.stack.Y;
+  state.stack.X = base * pct / 100;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function percentDelta() {
+  commitEntry();
+  saveLastX();
+  const newVal = state.stack.X;
+  const oldVal = state.stack.Y;
+  if (oldVal === 0) { showError(' Error 0  '); return; }
+  state.stack.X = (newVal - oldVal) / Math.abs(oldVal) * 100;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function percentTotal() {
+  commitEntry();
+  saveLastX();
+  const part = state.stack.X;
+  const total = state.stack.Y;
+  if (total === 0) { showError(' Error 0  '); return; }
+  state.stack.X = part / total * 100;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   BOND CALCULATIONS
+   ========================================================= */
+function doBondPrice() {
+  // X = yield (annual %), Y = coupon rate (annual %), Z = n (periods)
+  // HP 12C uses: PV=price, PMT=coupon, FV=par, n, i
+  // Simplified: use TVM registers
+  commitEntry();
+  const n = state.tvm.n;
+  const coupon = state.tvm.pmt;
+  const par = state.tvm.fv;
+  const y = state.tvm.i / 100;
+  if (n === 0) { showError(' Error 0  '); return; }
+  const price = y === 0
+    ? coupon * n + par
+    : coupon * (1 - Math.pow(1 + y, -n)) / y + par * Math.pow(1 + y, -n);
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = -price;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function doBondYTM() {
+  // Solve for i given PV (price), PMT (coupon), FV (par), N
+  state.tvm.i = solveI(state.tvm.n, state.tvm.pv, state.tvm.pmt, state.tvm.fv);
+  if (state.stackLiftEnabled) liftStack();
+  state.stack.X = state.tvm.i;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   DATE FUNCTIONS
+   ========================================================= */
+function toggleDMY() {
+  state.dmyMode = !state.dmyMode;
+  updateDisplay();
+}
+
+function dateFromHP(d) {
+  // HP 12C date format: MM.DDYYYY (MDY) or DD.MMYYYY (DMY)
+  const str = String(d);
+  const [intPart, fracPart = ''] = str.split('.');
+  const frac = fracPart.padEnd(6, '0');
+  if (state.dmyMode) {
+    const day = parseInt(intPart, 10);
+    const month = parseInt(frac.slice(0, 2), 10);
+    const year = parseInt(frac.slice(2, 6), 10);
+    return new Date(year, month-1, day);
+  } else {
+    const month = parseInt(intPart, 10);
+    const day = parseInt(frac.slice(0, 2), 10);
+    const year = parseInt(frac.slice(2, 6), 10);
+    return new Date(year, month-1, day);
+  }
+}
+
+function dateToHP(dt) {
+  const d = dt.getDate();
+  const m = dt.getMonth() + 1;
+  const y = dt.getFullYear();
+  if (state.dmyMode) {
+    return parseFloat(`${d}.${String(m).padStart(2,'0')}${String(y).padStart(4,'0')}`);
+  } else {
+    return parseFloat(`${m}.${String(d).padStart(2,'0')}${String(y).padStart(4,'0')}`);
+  }
+}
+
+function opDateAdd() {
+  commitEntry();
+  // X = days, Y = date in HP format
+  const days = Math.round(state.stack.X);
+  const date = dateFromHP(state.stack.Y);
+  date.setDate(date.getDate() + days);
+  const result = dateToHP(date);
+  saveLastX();
+  state.stack.X = result;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+function doDeltaDays() {
+  commitEntry();
+  // X = date2, Y = date1; result = days between
+  const d1 = dateFromHP(state.stack.Y);
+  const d2 = dateFromHP(state.stack.X);
+  const diff = Math.round((d2 - d1) / (1000*60*60*24));
+  saveLastX();
+  state.stack.X = diff;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   RND
+   ========================================================= */
+function doRND() {
+  commitEntry();
+  saveLastX();
+  const n = state.fixMode >= 0 ? state.fixMode : 2;
+  const factor = Math.pow(10, n);
+  state.stack.X = Math.round(state.stack.X * factor) / factor;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   CONDITIONAL (simplified program branching stubs)
+   ========================================================= */
+function conditionalXLE0() { /* placeholder */ }
+function conditionalXEQ0() { /* placeholder */ }
+function conditionalXGT0() { /* placeholder */ }
+function convertRectPolar() {
+  commitEntry();
+  const x = state.stack.X;
+  const y = state.stack.Y;
+  const r = Math.sqrt(x*x + y*y);
+  const theta = Math.atan2(y, x) * 180 / Math.PI;
+  state.stack.Y = theta;
+  state.stack.X = r;
+  state.stackLiftEnabled = true;
+  updateDisplay();
+}
+
+/* =========================================================
+   PROGRAM MODE
+   ========================================================= */
+function toggleProgramMode() {
+  state.programMode = !state.programMode;
+  state.programCounter = 0;
+  updateDisplay();
+}
+
+function stepProgram(dir) {
+  state.programCounter = Math.max(0, state.programCounter + dir);
+}
+
+function runProgram() {
+  // Simplified: just show running indicator
+  updateDisplay();
+}
+
+/* =========================================================
+   EVENT BINDING
+   ========================================================= */
+document.getElementById('keypad').addEventListener('click', (e) => {
+  const key = e.target.closest('[data-key]');
+  if (!key) return;
+  const k = key.getAttribute('data-key');
+
+  // Visual press feedback
+  key.classList.add('pressed');
+  setTimeout(() => key.classList.remove('pressed'), 120);
+
+  // Route TVM keys through their special handler
+  if (['n','i','pv','pmt','fv'].includes(k) && !state.shiftF && !state.shiftG) {
+    handleTVMKey(k);
+    return;
+  }
+
+  handleKey(k);
+});
+
+/* =========================================================
+   KEYBOARD INPUT
+   ========================================================= */
+const keyMap = {
+  '0':'0','1':'1','2':'2','3':'3','4':'4',
+  '5':'5','6':'6','7':'7','8':'8','9':'9',
+  '.':'dot',',':'dot',
+  '+':'add','-':'sub','*':'mul','/':'div',
+  'Enter':'enter','Escape':'clx','Backspace':'clx',
+  'n':'n','i':'i','p':'pv','m':'pmt','v':'fv',
+  'f':'f','g':'g',
+  's':'sqrt','r':'inv','c':'chs','e':'eex',
+  'E':'eex',
+};
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  const mapped = keyMap[e.key];
+  if (mapped) {
+    e.preventDefault();
+    // Flash key on keyboard
+    const keyEl = document.querySelector(`[data-key="${mapped}"]`);
+    if (keyEl) {
+      keyEl.classList.add('pressed');
+      setTimeout(() => keyEl.classList.remove('pressed'), 120);
+    }
+    // Route TVM
+    if (['n','i','pv','pmt','fv'].includes(mapped) && !state.shiftF && !state.shiftG) {
+      handleTVMKey(mapped);
+      return;
+    }
+    handleKey(mapped);
+  }
+});
+
+/* =========================================================
+   INIT
+   ========================================================= */
+updateDisplay();
+</script>
+</body>
+</html>
