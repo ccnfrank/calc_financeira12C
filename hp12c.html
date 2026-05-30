@@ -605,7 +605,6 @@
 <div class="calc-wrapper">
   <div class="calc-brand">
     criado por @christianfrank <br>github @ccnfrank
-    <button class="orientation-toggle" id="orientationToggle" title="Alternar orientação (← →)"></button>
     <button class="shortcuts-toggle" id="shortcutsToggle" title="Ver atalhos (?)">?</button>
   </div>
   <div class="calc-content">
@@ -1757,12 +1756,12 @@ function solveN(r, pv, pmt, fv) {
     if (pmt === 0) return null;
     return -(pv + fv) / pmt;
   }
-  // Newton-Raphson or closed form when possible
+  
   if (pmt === 0) {
     if (pv === 0 || fv === 0) return null;
     return -Math.log(fv / pv) / Math.log(1 + r);
   }
-  // Iterative
+  
   const sign = (pmt > 0) ? 1 : -1;
   let n = 1;
   for (let iter = 0; iter < 500; iter++) {
@@ -2267,27 +2266,14 @@ function runProgram() {
 }
 
 /* =========================================================
-   ORIENTATION TOGGLE
+   ORIENTATION - VERTICAL ONLY
    ========================================================= */
-function toggleOrientation() {
+// Forçar modo vertical
+window.addEventListener('load', () => {
   const wrapper = document.querySelector('.calc-wrapper');
   const calc = document.getElementById('calculator');
-  const isVertical = wrapper.classList.toggle('vertical-layout');
-  calc.classList.toggle('vertical');
-  localStorage.setItem('calcOrientation', isVertical ? 'vertical' : 'horizontal');
-}
-
-document.getElementById('orientationToggle').addEventListener('click', toggleOrientation);
-
-// Sempre começar em horizontal (sem restaurar preferência salva)
-// localStorage.clear(); // Opcional: limpar preferências anteriores
-
-// Shortcut para alternar orientação (Setas direita / esquerda)
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-    e.preventDefault();
-    toggleOrientation();
-  }
+  wrapper.classList.add('vertical-layout');
+  calc.classList.add('vertical');
 });
 
 /* =========================================================
